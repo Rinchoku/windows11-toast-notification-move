@@ -23,22 +23,9 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe ^
   NotificationMover.cs
 ```
 
-### 2. スタートアップ登録
+### 2. 起動・自動登録
 
-ログオン時に自動起動するようタスクスケジューラに登録する（管理者権限不要）。
-
-```powershell
-$action = New-ScheduledTaskAction -Execute 'C:\path\to\windows-notification-mover\NotificationMover.exe'
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName 'NotificationMover' -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force
-```
-
-### 3. 今すぐ起動
-
-```powershell
-Start-ScheduledTask -TaskName 'NotificationMover'
-```
+`NotificationMover.exe` をダブルクリックして起動する。初回起動時に自動でタスクスケジューラへ登録され、次回ログオン以降は自動起動する。
 
 ## 起動・停止
 

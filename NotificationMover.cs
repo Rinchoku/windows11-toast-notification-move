@@ -50,6 +50,9 @@ class NotificationMover
     [DllImport("user32.dll")]
     static extern bool SetProcessDPIAware();
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
     [StructLayout(LayoutKind.Sequential)]
     struct RECT { public int Left, Top, Right, Bottom; }
 
@@ -79,6 +82,15 @@ class NotificationMover
         debug = false;
         foreach (string a in args)
             if (a == "--debug") debug = true;
+
+        string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        if (!IsTaskRegistered())
+        {
+            RegisterTask(exePath);
+            MessageBox(IntPtr.Zero,
+                "タスクスケジューラに登録しました。\n次回ログオン時から自動起動します。",
+                "NotificationMover", 0x40);
+        }
 
         screenW = GetSystemMetrics(SM_CXSCREEN);
         screenH = GetSystemMetrics(SM_CYSCREEN);
@@ -186,6 +198,36 @@ class NotificationMover
 
             Thread.Sleep(30);
         }
+    }
+
+    static bool IsTaskRegistered()
+    {
+        var psi = new ProcessStartInfo("schtasks.exe", "/query /tn NotificationMover /fo LIST")
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        using (var p = Process.Start(psi))
+        {
+            p.WaitForExit();
+            return p.ExitCode == 0;
+        }
+    }
+
+    static void RegisterTask(string exePath)
+    {
+        string args = string.Format(
+            "/create /tn NotificationMover /tr \"\\\"{0}\\\"\" /sc ONLOGON /ru {1} /f /rl LIMITED",
+            exePath, Environment.UserName);
+        var psi = new ProcessStartInfo("schtasks.exe", args)
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+        using (var p = Process.Start(psi))
+            p.WaitForExit();
     }
 
     static bool IsNotificationWindow(string cls, string procName)
