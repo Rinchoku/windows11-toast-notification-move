@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 class NotificationMover
 {
@@ -36,28 +36,13 @@ class NotificationMover
     static extern bool IsWindowVisible(IntPtr hwnd);
 
     [DllImport("user32.dll")]
-    static extern bool GetMessage(out MSG msg, IntPtr hwnd, uint min, uint max);
-
-    [DllImport("user32.dll")]
-    static extern bool TranslateMessage(ref MSG msg);
-
-    [DllImport("user32.dll")]
-    static extern IntPtr DispatchMessage(ref MSG msg);
-
-    [DllImport("user32.dll")]
     static extern int GetSystemMetrics(int nIndex);
 
     [DllImport("user32.dll")]
     static extern bool SetProcessDPIAware();
 
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
-
     [StructLayout(LayoutKind.Sequential)]
     struct RECT { public int Left, Top, Right, Bottom; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam; public IntPtr lParam; public uint time; public int ptX, ptY; }
 
     const uint EVENT_OBJECT_SHOW           = 0x8002;
     const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
@@ -65,7 +50,6 @@ class NotificationMover
     const uint SWP_NOSIZE     = 0x0001;
     const uint SWP_NOZORDER   = 0x0004;
     const uint SWP_NOACTIVATE = 0x0010;
-    const uint SWP_ASYNCWINDOWPOS = 0x4000;
     const int SM_CXSCREEN = 0;
     const int SM_CYSCREEN = 1;
 
@@ -75,9 +59,11 @@ class NotificationMover
     static bool debug;
     static WinEventDelegate hookDelegate;
 
+    [STAThread]
     static void Main(string[] args)
     {
         SetProcessDPIAware();
+        Application.EnableVisualStyles();
 
         debug = false;
         foreach (string a in args)
@@ -87,9 +73,9 @@ class NotificationMover
         if (!IsTaskRegistered())
         {
             RegisterTask(exePath);
-            MessageBox(IntPtr.Zero,
+            MessageBox.Show(
                 "タスクスケジューラに登録しました。\n次回ログオン時から自動起動します。",
-                "NotificationMover", 0x40);
+                "NotificationMover", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         screenW = GetSystemMetrics(SM_CXSCREEN);
@@ -106,14 +92,25 @@ class NotificationMover
 
         Log(string.Format("Started. Screen={0}x{1}", screenW, screenH));
 
-        MSG msg;
-        while (GetMessage(out msg, IntPtr.Zero, 0, 0))
+        var trayMenu = new ContextMenu();
+        trayMenu.MenuItems.Add("終了", delegate(object s, EventArgs e)
         {
-            TranslateMessage(ref msg);
-            DispatchMessage(ref msg);
-        }
+            UnhookWinEvent(hook);
+            Application.Exit();
+        });
 
-        UnhookWinEvent(hook);
+        var tray = new NotifyIcon()
+        {
+            Icon = System.Drawing.Icon.ExtractAssociatedIcon(exePath),
+            Text = "NotificationMover",
+            ContextMenu = trayMenu,
+            Visible = true
+        };
+
+        Application.Run();
+
+        tray.Visible = false;
+        tray.Dispose();
     }
 
     static void OnWinEvent(IntPtr hook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)

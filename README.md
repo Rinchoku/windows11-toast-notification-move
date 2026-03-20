@@ -20,6 +20,8 @@ Windows 11 の通知はデフォルトで右下に表示されるが、設定で
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe ^
   /out:NotificationMover.exe ^
   /target:winexe ^
+  /reference:System.Windows.Forms.dll ^
+  /reference:System.Drawing.dll ^
   NotificationMover.cs
 ```
 
@@ -29,14 +31,13 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe ^
 
 ## 起動・停止
 
+### 停止
+
+タスクトレイ（画面右下の通知領域）の NotificationMover アイコンを右クリック → **終了**。
+
+### スタートアップ登録を解除
+
 ```powershell
-# 起動
-Start-ScheduledTask -TaskName 'NotificationMover'
-
-# 停止
-Stop-Process -Name NotificationMover -Force
-
-# スタートアップ登録を解除
 Unregister-ScheduledTask -TaskName 'NotificationMover' -Confirm:$false
 ```
 
