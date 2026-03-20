@@ -58,6 +58,7 @@ class NotificationMover
     static int screenW, screenH;
     static bool debug;
     static WinEventDelegate hookDelegate;
+    static System.Threading.Mutex singleInstanceMutex;
 
     [STAThread]
     static void Main(string[] args)
@@ -66,7 +67,7 @@ class NotificationMover
         Application.EnableVisualStyles();
 
         bool createdNew;
-        var mutex = new System.Threading.Mutex(true, "NotificationMoverSingleInstance", out createdNew);
+        singleInstanceMutex = new System.Threading.Mutex(true, "NotificationMoverSingleInstance", out createdNew);
         if (!createdNew)
         {
             MessageBox.Show("NotificationMover はすでに起動しています。", "NotificationMover",
