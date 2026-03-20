@@ -65,6 +65,15 @@ class NotificationMover
         SetProcessDPIAware();
         Application.EnableVisualStyles();
 
+        bool createdNew;
+        var mutex = new System.Threading.Mutex(true, "NotificationMoverSingleInstance", out createdNew);
+        if (!createdNew)
+        {
+            MessageBox.Show("NotificationMover はすでに起動しています。", "NotificationMover",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         debug = false;
         foreach (string a in args)
             if (a == "--debug") debug = true;
@@ -106,6 +115,8 @@ class NotificationMover
             ContextMenu = trayMenu,
             Visible = true
         };
+
+        tray.ShowBalloonTip(3000, "NotificationMover", "起動しました。通知を右上に移動します。", ToolTipIcon.Info);
 
         Application.Run();
 

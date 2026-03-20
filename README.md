@@ -31,6 +31,10 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe ^
 
 ## 起動・停止
 
+### 起動
+
+`NotificationMover.exe` をダブルクリックする。起動するとトレイアイコンが表示され、バルーン通知が出る。
+
 ### 停止
 
 タスクトレイ（画面右下の通知領域）の NotificationMover アイコンを右クリック → **終了**。
@@ -56,7 +60,7 @@ int margin = 10;  // 画面端からの距離（ピクセル）
 通知アニメーションに対抗して繰り返し移動する回数と間隔。
 
 ```csharp
-for (int i = 0; i < 20; i++)   // 繰り返し回数（20回 × 30ms = 600ms）
+for (int i = 0; i < 60; i++)   // 繰り返し回数（最大60回 × 30ms = 1.8秒）
 {
     ...
     Thread.Sleep(30);            // 移動間隔（ms）
@@ -101,7 +105,9 @@ static bool IsNotificationWindow(string cls, string procName)
 
 ## 仕組み
 
-1. `SetWinEventHook` で `EVENT_OBJECT_SHOW` / `EVENT_OBJECT_LOCATIONCHANGE` を監視
-2. `ShellExperienceHost` の `Windows.UI.Core.CoreWindow` が画面右下に出現したら通知ウィンドウと判定
-3. `SetWindowPos` で右上に移動。通知アニメーションが位置を上書きするため 30ms ごとに 20 回繰り返す
-4. 一度移動したウィンドウは `alreadyMoved` で追跡し、閉じるアニメーションで再移動しないよう制御
+1. 起動時に名前付き Mutex で多重起動を防止。既に起動済みの場合はダイアログを出して終了
+2. タスクスケジューラ未登録の場合は自動登録し、次回ログオンから自動起動
+3. タスクトレイにアイコンを常駐。右クリック → **終了** で停止できる
+4. `SetWinEventHook` で `EVENT_OBJECT_SHOW` / `EVENT_OBJECT_LOCATIONCHANGE` を監視
+5. `ShellExperienceHost` の `Windows.UI.Core.CoreWindow` が画面右下に出現したら通知ウィンドウと判定
+6. `SetWindowPos` で右上に移動。通知アニメーションが位置を上書きするため 30ms ごとに最大 60 回繰り返す（目標位置で安定したら早期終了）
